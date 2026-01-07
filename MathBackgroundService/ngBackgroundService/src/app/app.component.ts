@@ -50,56 +50,57 @@ export class AppComponent {
 
   nbRightAnswers = 0;
 
-  private hubConnection?: signalR.HubConnection;
+  private hubConnection?: signalR.HubConnection
 
   isConnected = false;
   selection = -1;
 
   currentQuestion: MathQuestion | null = null;
 
-  constructor(public account: AccountService, private zone: NgZone) {}
-
-  selectChoice(choice: number) {
-    this.selection = choice;
-    this.hubConnection!.invoke('SelectChoice', choice);
+  constructor(public account:AccountService, private zone: NgZone){
   }
 
-  async register() {
-    try {
+  SelectChoice(choice:number) {
+    this.selection = choice;
+    this.hubConnection!.invoke('SelectChoice', choice)
+  }
+
+  async register(){
+    try{
       await this.account.register();
-    } catch (e) {
+    }
+    catch(e){
       alert("Erreur pendant l'enregistrement!!!!!");
       return;
     }
     alert("L'enregistrement a été un succès!");
   }
 
-  async login() {
+  async login(){
     await this.account.login();
   }
 
-  async logout() {
+  async logout(){
     await this.account.logout();
 
-    if (this.hubConnection?.state == signalR.HubConnectionState.Connected)
+    if(this.hubConnection?.state == signalR.HubConnectionState.Connected)
       this.hubConnection.stop();
     this.isConnected = false;
   }
 
-  isLoggedIn(): Boolean {
+  isLoggedIn() : Boolean{
     return this.account.isLoggedIn();
   }
 
   connectToHub() {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(this.baseUrl + 'game', {
-        accessTokenFactory: () => sessionStorage.getItem('token')!,
-      })
-      .build();
+                              .withUrl(this.baseUrl + 'game', { accessTokenFactory: () => sessionStorage.getItem("token")! })
+                              .build();
 
-    if (!this.hubConnection) return;
+    if(!this.hubConnection)
+      return;
 
-    this.hubConnection.on('PlayerInfo', (data: PlayerInfoDTO) => {
+    this.hubConnection.on('PlayerInfo', (data:PlayerInfoDTO) => {
       this.zone.run(() => {
         console.log(data);
         this.isConnected = true;
@@ -107,7 +108,7 @@ export class AppComponent {
       });
     });
 
-    this.hubConnection.on('CurrentQuestion', (data: MathQuestion) => {
+    this.hubConnection.on('CurrentQuestion', (data:MathQuestion) => {
       this.zone.run(() => {
         console.log(data);
         this.selection = -1;
@@ -115,19 +116,32 @@ export class AppComponent {
       });
     });
 
-    this.hubConnection.on('IncreasePlayersChoices', (choiceIndex: number) => {
+    this.hubConnection.on('IncreasePlayersChoices', (choiceIndex:number) => {
       this.zone.run(() => {
-        if (this.currentQuestion) {
+        if(this.currentQuestion){
           this.currentQuestion.playerChoices[choiceIndex]++;
         }
+      });
+    });
+
+    this.hubConnection.on('RightAnswer', () => {
+      this.zone.run(() => {
+        this.nbRightAnswers++;
+        alert("Bonne réponse !");
+      });
+    });
+
+    this.hubConnection.on('WrongAnswer', (rightAnswer:number) => {
+      this.zone.run(() => {
+        alert("Mauvaise réponse ! La bonne réponse était " + rightAnswer);
       });
     });
 
     this.hubConnection
       .start()
       .then(() => {
-        console.log('Connected to Hub');
+        console.log("Connected to Hub");
       })
-      .catch((err) => console.log('Error while starting connection: ' + err));
+      .catch(err => console.log('Error while starting connection: ' + err))
   }
 }
